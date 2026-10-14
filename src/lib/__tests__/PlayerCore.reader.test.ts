@@ -266,6 +266,17 @@ describe('the reader (transcript="reader")', () => {
 		expect(document.activeElement).toBe(transcriptButton());
 	});
 
+	it('focus goes to the Transcript button when nothing had it (a click in Safari)', async () => {
+		const { container } = render(PlayerCore, {
+			props: { episode: makeEpisode(), transcript: 'reader' }
+		});
+		(document.activeElement as HTMLElement | null)?.blur();
+		expect(document.activeElement).toBe(document.body);
+		await openReader(container);
+		dialogOf(container)!.close();
+		await vi.waitFor(() => expect(document.activeElement).toBe(transcriptButton()));
+	});
+
 	it('openTranscript(): opens from a page’s own button and gives focus back to it', async () => {
 		const card = document.createElement('button');
 		card.textContent = 'Read the transcript';

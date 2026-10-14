@@ -265,9 +265,10 @@
 	async function readerClosed() {
 		reading = false;
 		await tick();
-		// Back to what opened it, else this player's Transcript button (the
-		// one pressed was in the body the reader held, and has been replaced).
-		(opener?.isConnected ? opener : transcriptButtonEl)?.focus();
+		// Back to what opened it, else this player's Transcript button: the
+		// one pressed was in the body the reader held and has been replaced,
+		// and Safari leaves focus on the page when a button is clicked.
+		(opener?.isConnected && opener !== document.body ? opener : transcriptButtonEl)?.focus();
 		opener = null;
 		rootEl?.dispatchEvent(new Event('showfm:transcript-close', { bubbles: true, composed: true }));
 		ontranscriptclose?.();
