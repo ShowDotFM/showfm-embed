@@ -140,13 +140,12 @@ jobs:
     # This environment setting protects the fallback install when a tool is absent.
     env:
       DEBIAN_FRONTEND: noninteractive
-    # CLAUDE_CODE_OAUTH_TOKEN is a REPOSITORY secret: a long-lived subscription
-    # token from `claude setup-token` (Dan's Max plan, 2026-08-19). It bills the
-    # scan to the subscription instead of API dollars. It EXPIRES after roughly
+    # CLAUDE_CODE_OAUTH_TOKEN is a REPOSITORY secret: a long-lived OAuth
+    # token from `claude setup-token`. It EXPIRES after roughly
     # a year; when this job starts failing to authenticate, regenerate it with
     # `claude setup-token` and update the secret under Settings > Secrets >
-    # Actions. The old CLAUDE_API_KEY secret is no longer read here (kept as a
-    # rollback until this has run clean for a while).
+    # Actions. The value must start with sk-ant-oat: the pinned action refuses
+    # anything else. Never use an API key.
     steps:
       # APT MIRROR WORKAROUND. `azure.archive.ubuntu.com` is the mirror GitHub's
       # hosted images point at, and it is intermittently unreachable. Apt then
@@ -206,7 +205,8 @@ jobs:
       # ShowDotFM fork of anthropics/claude-code-security-review, pinned to
       # the OAuth-token commit. The fork is upstream 0c6a49f (the exact commit
       # this workflow ran before) plus one change: a `claude-code-oauth-token`
-      # input so the scan authenticates against Dan's Claude subscription.
+      # input so the scan can authenticate with an OAuth token.
+      # Since fork commit 8b2c727 that input must start with sk-ant-oat.
       # A checked-in local patch now supplies the complete event-pinned Git
       # manifest/diff and input provenance. Prompts, OAuth, model, exclusions,
       # comments and filtering remain upstream; the final result gate rejects
@@ -230,7 +230,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ShowDotFM/claude-code-security-review
-          ref: e1092743ad11d9d918e00cb4e740e7b121205d98
+          ref: 8b2c7277772d514218a2e16e52b17c6e4619f425
           path: .security-review-action
           persist-credentials: false
       - name: Verify and prepare complete PR input adapter

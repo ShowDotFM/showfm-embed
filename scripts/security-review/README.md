@@ -1,7 +1,7 @@
 # Security-review action adapter
 
 The workflow checks out `ShowDotFM/claude-code-security-review` at
-`e1092743ad11d9d918e00cb4e740e7b121205d98` and applies `action.patch` locally.
+`8b2c7277772d514218a2e16e52b17c6e4619f425` and applies `action.patch` locally.
 `prepare_action.py` verifies that commit and the original Python and action YAML files' SHA-256 hashes
 before applying the patch. The fork is unchanged remotely; no provider code is
 vendored here.
@@ -31,7 +31,7 @@ Obtain a pristine checkout of the public pinned action, then run:
 
 ```sh
 git clone https://github.com/ShowDotFM/claude-code-security-review.git /tmp/security-review-action
-git -C /tmp/security-review-action checkout --detach e1092743ad11d9d918e00cb4e740e7b121205d98
+git -C /tmp/security-review-action checkout --detach 8b2c7277772d514218a2e16e52b17c6e4619f425
 python3 scripts/security-review/test_adapter.py /tmp/security-review-action
 ```
 

@@ -40,12 +40,16 @@ class IndependentTests(mod.AdapterTests):
   result=self.valid_result();result['input_scope']['files']=[f'file-{i}.py' for i in range(313)];result['input_scope']['file_count']=313
   with self.assertRaises(ValueError):mod.verify(result,self.event)
  def test_oauth_only_and_no_credentials_exact_runner(self):
-  namespace={'os':os,'subprocess':subprocess,'Optional':Optional,'Tuple':Tuple,'Dict':Dict,'Any':Any,'Path':Path,'SUBPROCESS_TIMEOUT':600}
+  # The pinned action's own prefix constant, so the runner is exercised exactly as shipped.
+  prefix=next(n.value.value for n in ast.parse((self.action/'claudecode/constants.py').read_text()).body if isinstance(n,ast.Assign) and getattr(n.targets[0],'id','')=='OAUTH_TOKEN_PREFIX')
+  namespace={'os':os,'subprocess':subprocess,'Optional':Optional,'Tuple':Tuple,'Dict':Dict,'Any':Any,'Path':Path,'SUBPROCESS_TIMEOUT':600,'OAUTH_TOKEN_PREFIX':prefix}
   selected=[n for n in self.tree.body if isinstance(n,ast.ClassDef) and n.name=='SimpleClaudeRunner']
   exec(compile(ast.Module(body=selected,type_ignores=[]),'patched-exact-runner','exec'),namespace)
   runner=namespace['SimpleClaudeRunner']()
   with patch.object(subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='',stderr='')):
-   with patch.dict(os.environ,{'CLAUDE_CODE_OAUTH_TOKEN':'synthetic-oauth'},clear=True):self.assertEqual((True,''),runner.validate_claude_available())
+   with patch.dict(os.environ,{'CLAUDE_CODE_OAUTH_TOKEN':prefix+'01-synthetic'},clear=True):self.assertEqual((True,''),runner.validate_claude_available())
+   # An API key in the OAuth slot must be refused.
+   with patch.dict(os.environ,{'CLAUDE_CODE_OAUTH_TOKEN':'sk-ant-api03-synthetic'},clear=True):self.assertFalse(runner.validate_claude_available()[0])
    with patch.dict(os.environ,{},clear=True):self.assertFalse(runner.validate_claude_available()[0])
  def test_command_rejects_missing_and_invalid_json_results(self):
   path=self.root/'independent-missing-result.json'
