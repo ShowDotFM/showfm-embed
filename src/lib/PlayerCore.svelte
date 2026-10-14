@@ -130,9 +130,11 @@
 			let active = document.activeElement;
 			while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
 			opener = active as HTMLElement | null;
+			const asked = episode;
 			void loadChunk(import('./transcript.svelte.js')).then(() => {
-				// The player may have gone, or stopped offering it, meanwhile.
-				if (!rootEl || !reader || !offerTranscript) return;
+				// The player may have gone, stopped offering it, or moved to
+				// another episode meanwhile: then this request opens nothing.
+				if (!rootEl || !reader || !offerTranscript || episode !== asked) return;
 				// The player keeps its place on the page while its body is in the
 				// reader, so nothing moves under it and nothing jumps on close.
 				held = rootEl.offsetHeight;
@@ -246,11 +248,12 @@
 	const showCredit = $derived(credit ?? episode.podcast.branding.show_powered_by);
 	// Only for audio and a VTT on show.fm's media hosts (canOfferTranscript).
 	// A browser without a modal <dialog> (before Safari 15.4 and Firefox 98,
-	// which the build still targets) gets the panel under the controls, as
-	// with `on`. The server assumes one, so its markup matches the browsers
-	// that have it.
+	// which the build still targets, and which may have no HTMLDialogElement
+	// at all) gets the panel under the controls, as with `on`. The server
+	// assumes one, so its markup matches the browsers that have it.
 	const modal =
-		typeof HTMLDialogElement === 'undefined' || 'showModal' in HTMLDialogElement.prototype;
+		typeof window === 'undefined' ||
+		(typeof HTMLDialogElement === 'function' && 'showModal' in HTMLDialogElement.prototype);
 	const reader = $derived(transcript === 'reader' && modal);
 	const offerTranscript = $derived(
 		(transcript === 'on' || transcript === 'open' || transcript === 'reader') &&

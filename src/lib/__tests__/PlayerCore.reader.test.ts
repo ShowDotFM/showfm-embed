@@ -370,6 +370,16 @@ describe('the reader (transcript="reader")', () => {
 		}
 	});
 
+	it('falls back to the panel where there is no HTMLDialogElement at all', async () => {
+		vi.stubGlobal('HTMLDialogElement', undefined);
+		const view = render(PlayerCore, { props: { episode: makeEpisode(), transcript: 'reader' } });
+		vi.unstubAllGlobals();
+		expect(transcriptButton()).toHaveAttribute('aria-expanded', 'false');
+		await fireEvent.click(transcriptButton());
+		expect(view.container.querySelector('.tr')).not.toBeNull();
+		expect(dialogOf(view.container)).toBeNull();
+	});
+
 	it('keeps its place on the page while open', async () => {
 		const { container } = render(PlayerCore, {
 			props: { episode: makeEpisode(), transcript: 'reader' }
