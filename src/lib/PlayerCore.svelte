@@ -245,9 +245,15 @@
 	);
 	const showCredit = $derived(credit ?? episode.podcast.branding.show_powered_by);
 	// Only for audio and a VTT on show.fm's media hosts (canOfferTranscript).
-	const reader = $derived(transcript === 'reader');
+	// A browser without a modal <dialog> (before Safari 15.4 and Firefox 98,
+	// which the build still targets) gets the panel under the controls, as
+	// with `on`. The server assumes one, so its markup matches the browsers
+	// that have it.
+	const modal =
+		typeof HTMLDialogElement === 'undefined' || 'showModal' in HTMLDialogElement.prototype;
+	const reader = $derived(transcript === 'reader' && modal);
 	const offerTranscript = $derived(
-		(transcript === 'on' || transcript === 'open' || reader) &&
+		(transcript === 'on' || transcript === 'open' || transcript === 'reader') &&
 			hostedAudio &&
 			isShowfmMediaUrl(episode.transcript?.url, mediaHosts())
 	);

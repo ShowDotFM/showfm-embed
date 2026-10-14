@@ -341,6 +341,24 @@ describe('the reader (transcript="reader")', () => {
 		);
 	});
 
+	it('falls back to the panel in a browser without a modal dialog', async () => {
+		const showModal = dialogProto.showModal;
+		delete dialogProto.showModal;
+		try {
+			const view = render(PlayerCore, {
+				props: { episode: makeEpisode(), transcript: 'reader' }
+			});
+			expect(transcriptButton()).toHaveAttribute('aria-expanded', 'false');
+			expect(transcriptButton()).not.toHaveAttribute('aria-haspopup');
+			await fireEvent.click(transcriptButton());
+			expect(view.container.querySelector('.tr')).not.toBeNull();
+			expect(dialogOf(view.container)).toBeNull();
+			expect(view.component.openTranscript()).toBe(true);
+		} finally {
+			dialogProto.showModal = showModal;
+		}
+	});
+
 	it('keeps its place on the page while open', async () => {
 		const { container } = render(PlayerCore, {
 			props: { episode: makeEpisode(), transcript: 'reader' }

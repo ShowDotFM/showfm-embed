@@ -66,7 +66,7 @@ const ATTRIBUTES = {
 	transcript: {
 		type: "'on' | 'open' | 'reader'",
 		description:
-			"`on` adds a Transcript button that opens the follow-along transcript under the player, which grows downwards; `open` opens it at once. `reader` makes the button open a full-screen reader instead: a modal dialog with the player pinned on top, search, and speakers' photos. Only the standard size has the button, and only when the audio and the transcript are on show.fm. Absent, there is no button."
+			"`on` adds a Transcript button that opens the follow-along transcript under the player, which grows downwards; `open` opens it at once. `reader` makes the button open a full-screen reader instead: a modal dialog with the player pinned on top, search, and speakers' photos; a browser without a modal dialog gets the panel instead. Only the standard size has the button, and only when the audio and the transcript are on show.fm. Absent, there is no button."
 	},
 	'speaker-photos': {
 		type: "'on' | 'off'",
