@@ -1,5 +1,11 @@
 # @showfm/embed
 
+## 1.7.0
+
+### Minor Changes
+
+- [#24](https://github.com/ShowDotFM/showfm-embed/pull/24) [`b44a8f3`](https://github.com/ShowDotFM/showfm-embed/commit/b44a8f34d40bb06a2f861178b436ef626600d016) Thanks [@danmaby](https://github.com/danmaby)! - Add the transcript reader: `transcript="reader"` makes the player's Transcript button open the follow-along transcript full screen, in a modal dialog with the same player pinned on top, search, and each speaker's photo or initials beside their lines (`speaker-photos="off"` shows initials only). `openTranscript()` opens it from a page's own button, and `showfm:transcript-close` says when it has closed. The episode payload's `people` can now carry `photo_url`. `v1.js`'s size budget moves from 30 kB to 31 kB to hold the reader's hooks.
+
 ## 1.6.2
 
 ### Patch Changes
