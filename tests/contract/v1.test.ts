@@ -18,8 +18,8 @@ import { episodePayload } from '../fixtures/episode';
 
 const ATTRIBUTES = ['episode', 'podcast', 'theme', 'size', 'accent', 'wave', 'api'];
 const ADDED_IN_1_1 = ['heading-level', 'credit', 'load', 'strings'];
-/** The transcript option (EMB-5). */
-const ADDED_LATER = ['transcript'];
+/** The transcript option (EMB-5), and the reader's speaker photos (1.7). */
+const ADDED_LATER = ['transcript', 'speaker-photos'];
 const EPISODE_ID = '11111111-2222-4333-8444-555555555555';
 
 type PlayerConstructor = CustomElementConstructor & { observedAttributes?: string[] };

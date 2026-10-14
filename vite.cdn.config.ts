@@ -4,8 +4,9 @@
  * This is the file served as /player/v1.js. It started as the build the
  * show.fm app used before the player moved here, option for option. Since
  * 1.1 it minifies the component CSS and uses terser, to stay inside the
- * 30 kB budget. configFile: false keeps it independent of svelte.config.js:
- * only this build (and the ESM build) compiles with customElement: true.
+ * 31 kB budget (30 kB until 1.7 added the transcript reader).
+ * configFile: false keeps it independent of svelte.config.js: only this
+ * build (and the ESM build) compiles with customElement: true.
  * Versioning: compatible changes update v1.js in place; breaking player
  * changes ship as a new v2 entry.
  */

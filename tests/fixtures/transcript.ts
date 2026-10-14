@@ -110,11 +110,18 @@ export function conversationVtt({
 }
 
 /** GET /v1/episodes/{id} → data, for an episode with a transcript. */
+/** Maya's photo, on the media host. Tom has none. */
+export const MAYA_PHOTO = 'https://m.cdn.media/people/maya.png';
+
 export function transcriptEpisode({
 	audio = TRANSCRIPT_AUDIO,
 	vtt = TRANSCRIPT_VTT as string | null,
 	duration = 3138,
-	theme = null as string | null
+	theme = null as string | null,
+	people = [
+		{ name: 'Maya', role: 'Host', photo_url: MAYA_PHOTO },
+		{ name: 'Tom', role: 'Guest', photo_url: null }
+	] as { name: string; role: string | null; photo_url?: string | null }[]
 } = {}) {
 	return {
 		id: TRANSCRIPT_EPISODE_ID,
@@ -126,6 +133,7 @@ export function transcriptEpisode({
 		artwork: { url: 'https://media.example.test/cover.png' },
 		links: { listen: 'https://show.fm/the-long-table/e/bakery' },
 		transcript: vtt ? { url: vtt, type: 'text/vtt' } : null,
+		people,
 		podcast: {
 			title: 'The Long Table',
 			brand_color: '#7E22CE',

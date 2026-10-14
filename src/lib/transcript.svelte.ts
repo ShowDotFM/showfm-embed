@@ -53,6 +53,21 @@ export interface TranscriptEmbed {
 	audio: () => HTMLMediaElement | null | undefined;
 	/** The episode, with its audio and transcript URLs: the API is not asked. */
 	episode: ControllerEpisode;
+	/** The player's reader (`transcript="reader"`): the transcript opens it. */
+	reader?: TranscriptReader;
+}
+
+/**
+ * The reader's dialog, which the player renders with its own body inside.
+ * The transcript draws the header into `head`, opens the dialog as a modal,
+ * holds the page still behind it, and calls `closed` when it has closed.
+ */
+export interface TranscriptReader {
+	dialog: HTMLDialogElement;
+	head: HTMLElement;
+	/** Whether speakers show their photos (a getter: the option is live). */
+	photos: () => boolean;
+	closed: () => void;
 }
 
 function readAttributes(host: HTMLElement, embed?: TranscriptEmbed): Record<string, string | null> {

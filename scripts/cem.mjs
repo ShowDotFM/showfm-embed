@@ -64,9 +64,16 @@ const ATTRIBUTES = {
 			'`click` draws a facade and requests nothing from show.fm until the visitor presses it. `showfm.load()` loads every facade at once.'
 	},
 	transcript: {
-		type: "'on' | 'open'",
+		type: "'on' | 'open' | 'reader'",
 		description:
-			'`on` adds a Transcript button that opens the follow-along transcript under the player, which grows downwards; `open` opens it at once. Only the standard size offers it, and only when the audio and the transcript are on show.fm. Absent, there is no button.'
+			"`on` adds a Transcript button that opens the follow-along transcript under the player, which grows downwards; `open` opens it at once. `reader` makes the button open a full-screen reader instead: a modal dialog with the player pinned on top, search, and speakers' photos; a browser without a modal dialog gets the panel instead. Only the standard size has the button, and only when the audio and the transcript are on show.fm. Absent, there is no button."
+	},
+	'speaker-photos': {
+		type: "'on' | 'off'",
+		field: 'speakerPhotos',
+		default: "'on'",
+		description:
+			'The reader (`transcript="reader"`) shows each speaker\'s photo from the episode\'s credits beside their lines. `off` shows their initials instead, as for a speaker with no photo.'
 	},
 	strings: {
 		type: 'Partial<Record<string, string>>',
@@ -567,7 +574,16 @@ export function buildManifest() {
 	}));
 	const shared = {
 		attributes,
-		members,
+		members: [
+			...members,
+			{
+				kind: 'method',
+				name: 'openTranscript',
+				return: { type: { text: 'boolean' } },
+				description:
+					'Opens the transcript: the reader with `transcript="reader"`, the panel under the player with `on` or `open`. Returns false when the player is not ready or offers no transcript, so a page can link to the transcript file instead. The method is there once the element has connected (a moment after it is added to the page), so call it from a later event such as a click. The reader opens once its code has loaded, and focus goes back to whatever had it when it closes.'
+			}
+		],
 		slots: [
 			{
 				name: '',

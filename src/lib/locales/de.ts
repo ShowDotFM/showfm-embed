@@ -106,7 +106,10 @@ const DE: Strings &
 	jumpTo: 'Zu {time} springen, {speaker}',
 	jumpToTime: 'Zu {time} springen',
 	backToNow: 'Zur aktuellen Stelle · {time}',
-	closeTranscript: 'Transkript schließen'
+	closeTranscript: 'Transkript schließen',
+	readerLabel: 'Transkript: {title}',
+	readerSeason: 'Staffel {n}',
+	readerEpisode: 'Folge {n}'
 };
 
 export default DE;

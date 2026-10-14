@@ -23,9 +23,19 @@
 	Screen readers: nothing here is a live region except the search count.
 	The spoken line is marked with aria-current, and only its timestamp is a
 	button, so the transcript is not hundreds of tab stops.
+
+	The reader (the player's `transcript="reader"`, frames 2d and 2e): the
+	player hands over its dialog. The transcript draws the header into it
+	(ReaderHead.svelte), opens it as a modal, keeps the page from scrolling
+	behind it, and fills the space under the player. Each speaker's first
+	line shows their photo from the episode's `people`, or their initials.
+	The reader's boxes are the dialog's grid items (transcript.css).
 -->
 <script lang="ts">
-	import { tick, untrack } from 'svelte';
+	import { mount, tick, unmount, untrack } from 'svelte';
+	import ReaderHead from './ReaderHead.svelte';
+	import { safeUrl } from './fallback';
+	import styles from './transcript.css?inline';
 	import { pageController, type AudioEntry, type ControllerEpisode } from './controller';
 	import { PLAYER_DEFAULT_API_URL } from './hosts';
 	import { elementGet, episodeEndpoint } from './api';
@@ -83,6 +93,7 @@
 	// transcript takes its colours from the player, as inside an element.
 	const embed = untrack(() => embedProp) ?? null;
 	const inside = !!(embed || embedHost);
+	const reader = embed?.reader ?? null;
 	// A list's grid panel (EpisodeList.svelte): the header names the episode
 	// and has a Close button, which the list answers (a `close` event).
 	const closable = host.hasAttribute('data-showfm-close');
@@ -90,7 +101,11 @@
 	const attr = (name: string) => attrs[name]?.trim() || null;
 	const episodeAttr = $derived(attr('episode'));
 	const forId = $derived(attr('for'));
-	const viewHeight = $derived(Math.min(2000, Math.max(120, Number(attr('height')) || 320)));
+	/** The reader's text area, as tall as the space under the player. */
+	let boxHeight = $state(0);
+	const viewHeight = $derived(
+		reader ? boxHeight || 600 : Math.min(2000, Math.max(120, Number(attr('height')) || 320))
+	);
 	const level = $derived(Number(attr('heading-level')));
 	const heading = $derived(Number.isInteger(level) && level >= 2 && level <= 6);
 
@@ -362,9 +377,13 @@
 	$effect(() => {
 		const box = scroller;
 		if (!box || typeof ResizeObserver === 'undefined') return;
-		const observer = new ResizeObserver(() => (width = box.clientWidth));
+		const size = () => {
+			width = box.clientWidth;
+			boxHeight = box.clientHeight;
+		};
+		const observer = new ResizeObserver(size);
 		observer.observe(box);
-		width = box.clientWidth;
+		size();
 		return () => observer.disconnect();
 	});
 
@@ -531,6 +550,101 @@
 		}
 	}
 
+	// ── the reader ─────────────────────────────────────────────────────
+	// "Season 2 · Episode 27 · Title". Titles often carry the number already,
+	// and "Episode 38 · Episode 38 - The Big One!" says it twice: then the
+	// title stands alone.
+	const context = $derived.by(() => {
+		const episode = shown?.known;
+		const title = episode?.title ?? '';
+		const parts: string[] = [];
+		if (episode?.season_number)
+			parts.push(formatString(t.readerSeason, { n: episode.season_number }));
+		if (episode?.episode_number)
+			parts.push(formatString(t.readerEpisode, { n: episode.episode_number }));
+		// Whole numbers only: "Episode 1" is not in "Episode 12: …".
+		const inTitle = (part: string) =>
+			new RegExp(`${part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\d)`, 'iu').test(title);
+		return parts.every(inTitle) ? title : [...parts, title].filter(Boolean).join(' · ');
+	});
+
+	$effect(() => {
+		if (!reader) return;
+		const { dialog, head } = reader;
+		const root = head.shadowRoot ?? head.attachShadow({ mode: 'open' });
+		const style = document.createElement('style');
+		style.textContent = styles;
+		root.append(style);
+		const app = mount(ReaderHead, {
+			target: root,
+			props: {
+				get kicker() {
+					return s.transcript;
+				},
+				get context() {
+					return context;
+				},
+				get closeLabel() {
+					return t.closeTranscript;
+				},
+				onclose: () => dialog.close()
+			}
+		});
+		// The page stays where it is behind the reader.
+		const page = document.documentElement.style;
+		const overflow = page.overflow;
+		page.overflow = 'hidden';
+		const closed = () => reader.closed();
+		dialog.addEventListener('close', closed);
+		if (!dialog.open) dialog.showModal();
+		root.querySelector('button')?.focus();
+		return () => {
+			dialog.removeEventListener('close', closed);
+			page.overflow = overflow;
+			void unmount(app);
+			style.remove();
+		};
+	});
+
+	$effect(() => {
+		reader?.dialog.setAttribute(
+			'aria-label',
+			formatString(t.readerLabel, { title: shown?.known?.title ?? '' })
+		);
+	});
+
+	/** Speaker name, trimmed and lower case, to their photo: the reader's only. */
+	const photoBySpeaker = $derived.by(() => {
+		const photos: Record<string, string> = {};
+		if (!reader?.photos()) return photos;
+		for (const person of shown?.known?.people ?? []) {
+			const url = safeUrl(person?.photo_url);
+			const name = person?.name?.trim().toLocaleLowerCase();
+			if (url && name && !photos[name]) photos[name] = url;
+		}
+		return photos;
+	});
+
+	/** The speaker's photo, or their initials when there is none or it fails to load. */
+	function avatar(name: string): HTMLElement {
+		const initials = document.createElement('span');
+		initials.className = 'av';
+		initials.setAttribute('aria-hidden', 'true');
+		const words = name.split(/\s+/).filter(Boolean);
+		initials.textContent = (
+			[...words[0]][0] + (words.length > 1 ? [...words[words.length - 1]][0] : '')
+		).toLocaleUpperCase();
+		const url = photoBySpeaker[name.trim().toLocaleLowerCase()];
+		if (!url) return initials;
+		const photo = document.createElement('img');
+		photo.className = 'av';
+		photo.alt = '';
+		photo.decoding = 'async';
+		photo.onerror = () => photo.replaceWith(initials);
+		photo.src = url;
+		return photo;
+	}
+
 	// ── focus across states ────────────────────────────────────────────
 	// The area under the search row is replaced whenever the state changes
 	// (Try again, a new episode, a show suspended mid-listen). If focus was
@@ -586,7 +700,7 @@
 	// drawn once and patched in place, so a focused timestamp keeps focus.
 	let linesBox = $state<HTMLElement | null>(null);
 	let drawn: Record<number, { el: HTMLElement; key: string }> = {};
-	let drawnFor: [TranscriptLine[], HTMLElement] | null = null;
+	let drawnFor: [TranscriptLine[], HTMLElement, Record<string, string>] | null = null;
 
 	const WAVE_ICON =
 		'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M2 10v3M6 6v11M10 3v18M14 8v7M18 5v13M22 10v3"/></svg>';
@@ -608,7 +722,8 @@
 			if (line.showSpeaker) {
 				const speaker = document.createElement('span');
 				speaker.className = 'spk';
-				speaker.textContent = line.speaker;
+				if (reader) speaker.append(avatar(line.speaker!));
+				speaker.append(line.speaker!);
 				el.firstChild!.after(speaker);
 			}
 			lineObserver?.observe(el);
@@ -647,10 +762,11 @@
 	$effect(() => {
 		const box = linesBox;
 		if (!box) return;
-		if (drawnFor?.[0] !== lines || drawnFor[1] !== box) {
+		// Photos are drawn with the line: new ones (or none) draw them all again.
+		if (drawnFor?.[0] !== lines || drawnFor[1] !== box || drawnFor[2] !== photoBySpeaker) {
 			for (const index in drawn) drawn[index].el.remove();
 			drawn = {};
-			drawnFor = [lines, box];
+			drawnFor = [lines, box, photoBySpeaker];
 		}
 		const keep: Record<number, true> = {};
 		for (const index of rendered) {
@@ -705,6 +821,7 @@
 <div
 	class="tr"
 	class:card={!inside}
+	class:rd={!!reader}
 	class:narrow
 	role="region"
 	aria-label={s.transcript}
@@ -800,7 +917,7 @@
 		<div
 			bind:this={() => scroller, setScroller}
 			class="scroll"
-			style="height:{viewHeight}px"
+			style={reader ? undefined : `height:${viewHeight}px`}
 			role="group"
 			aria-label={t.transcriptText}
 			tabindex="0"
@@ -832,7 +949,12 @@
 	{:else if status === 'loading'}
 		<!-- No live roles here: the transcript announces nothing unasked. The
 		     words are there for a screen reader that reads this far. -->
-		<div bind:this={body} class="msg skel" style="height:{viewHeight}px" tabindex="-1">
+		<div
+			bind:this={body}
+			class="msg skel"
+			style={reader ? undefined : `height:${viewHeight}px`}
+			tabindex="-1"
+		>
 			<p class="vh">{t.loadingTranscript}</p>
 			<div aria-hidden="true"><span></span><span></span><span></span></div>
 			<div aria-hidden="true"><span></span><span></span><span></span></div>
@@ -840,12 +962,22 @@
 			<div aria-hidden="true"><span></span><span></span><span></span></div>
 		</div>
 	{:else if status === 'error'}
-		<div bind:this={body} class="msg" style="height:{viewHeight}px" tabindex="-1">
+		<div
+			bind:this={body}
+			class="msg"
+			style={reader ? undefined : `height:${viewHeight}px`}
+			tabindex="-1"
+		>
 			<p>{t.transcriptError}</p>
 			<button type="button" class="retry" onclick={() => (attempt += 1)}>{s.retry}</button>
 		</div>
 	{:else}
-		<div bind:this={body} class="msg" style="height:{viewHeight}px" tabindex="-1">
+		<div
+			bind:this={body}
+			class="msg"
+			style={reader ? undefined : `height:${viewHeight}px`}
+			tabindex="-1"
+		>
 			<p>
 				{status === 'suspended'
 					? s.suspended

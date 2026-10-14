@@ -597,7 +597,7 @@ for (const [name, look] of Object.entries(LOOKS)) {
 			await expectPalette(page, ['showfm-mini-player'], 3);
 		});
 
-		test('the transcript: ready, searching, loading, error, suspended, waiting, none, in the player', async ({
+		test('the transcript: ready, searching, loading, error, suspended, waiting, none, in the player, the reader', async ({
 			page
 		}) => {
 			const transcript = (attributes = `episode="${transcriptEpisode().id}"`) =>
@@ -678,6 +678,26 @@ for (const [name, look] of Object.entries(LOOKS)) {
 						?.shadowRoot?.querySelector('.line')
 			);
 			await expectPalette(page, ['showfm-player'], 10);
+
+			// The reader (transcript="reader"): its header, the compact player,
+			// the text with photos and initials, and a search.
+			await serveTranscript(
+				page,
+				`<showfm-player episode="${transcriptEpisode().id}" theme="${theme}" transcript="reader" api="${API_ORIGIN}"></showfm-player>`,
+				{ head }
+			);
+			await page.getByRole('button', { name: 'Transcript' }).click();
+			await page.waitForFunction(
+				() =>
+					!!document
+						.querySelector('showfm-player')
+						?.shadowRoot?.querySelector('dialog[open] .rd-tr')
+						?.shadowRoot?.querySelector('.line .av')
+			);
+			await expectPalette(page, ['showfm-player'], 12);
+			await page.getByRole('searchbox', { name: 'Search transcript' }).fill('bread');
+			await expect(page.locator('showfm-player').getByText(/\d+ of \d+/)).toBeVisible();
+			await expectPalette(page, ['showfm-player'], 12);
 		});
 	});
 }

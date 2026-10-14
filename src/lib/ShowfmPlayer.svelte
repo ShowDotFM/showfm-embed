@@ -13,6 +13,7 @@
 			credit: { attribute: 'credit' },
 			load: { attribute: 'load' },
 			transcript: { attribute: 'transcript' },
+			speakerPhotos: { attribute: 'speaker-photos' },
 			strings: { attribute: 'strings', type: 'Object' }
 		}
 	}}
@@ -39,8 +40,10 @@
 	  platform="wordpress" set by the WordPress plugin: credit="off" hides it
 	                      for any show there (read from the host: no prop)
 	  load="click"        draw a facade and request nothing until pressed
-	  transcript="on|open" a Transcript button that opens the follow-along
-	                      transcript under the player (open: at once)
+	  transcript="on|open|reader" a Transcript button that opens the
+	                      follow-along transcript under the player (open: at
+	                      once), or as a full-screen reader (reader)
+	  speaker-photos="off" the reader shows speakers' initials, not photos
 	  mini-player="on"    when the player scrolls out of view while it plays,
 	                      the page's mini-player takes over its audio
 	                      (mini-player-position picks its corner). Read by
@@ -87,6 +90,7 @@
 		credit = 'auto',
 		load = '',
 		transcript = '',
+		speakerPhotos = '',
 		strings = undefined
 	}: {
 		episode?: string;
@@ -103,6 +107,8 @@
 		credit?: string;
 		load?: string;
 		transcript?: string;
+		/** Attribute string: `off` shows initials in the reader, not photos */
+		speakerPhotos?: string;
 		strings?: StringOverrides;
 	} = $props();
 
@@ -314,6 +320,15 @@
 		});
 	});
 
+	/**
+	 * Opens the transcript (the reader with `transcript="reader"`). False
+	 * when the player is not ready or offers no transcript. Svelte exposes
+	 * it as a method of the element.
+	 */
+	export function openTranscript(): boolean {
+		return core?.openTranscript() ?? false;
+	}
+
 	function activate() {
 		activated = 'play';
 	}
@@ -332,6 +347,7 @@
 		lang={languageTag}
 		strings={s}
 		{transcript}
+		speakerPhotos={speakerPhotos !== 'off'}
 		sourceTag="embed"
 	/>
 {:else if status === 'facade' || (status === 'loading' && activated)}

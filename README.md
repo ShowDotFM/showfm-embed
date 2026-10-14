@@ -102,7 +102,8 @@ The package also ships a [Custom Elements Manifest](https://custom-elements-mani
 | `heading-level`        | `2` to `6`                    | none                  | Wraps the episode title in a heading of that level. Without it the title is a link and no heading is emitted.                               |
 | `credit`               | `auto`, `on`, `off`           | `auto`                | The "Powered by show.fm" footer. See [The credit](#the-credit).                                                                             |
 | `load`                 | `click`                       |                       | Draws a facade and requests nothing until it is pressed. See [Load on click](#load-on-click).                                               |
-| `transcript`           | `on`, `open`                  | none                  | A Transcript button that opens the follow-along transcript under the player. `open` opens it at once.                                       |
+| `transcript`           | `on`, `open`, `reader`        | none                  | A Transcript button that opens the follow-along transcript under the player. `open` opens it at once. `reader` opens a full-screen reader.  |
+| `speaker-photos`       | `on`, `off`                   | `on`                  | The reader shows speakers' photos. `off` shows their initials. See [The transcript reader](#the-transcript-reader).                         |
 | `mini-player`          | `on`, `off`                   | `off`                 | The page's mini-player takes over when the player scrolls out of view. See [The mini-player option](#the-mini-player-option).               |
 | `mini-player-position` | `left`, `right`               | `right`               | The corner the collapsed mini-player sits in, when this player opens it.                                                                    |
 | `platform`             | `wordpress`                   | none                  | For the show.fm WordPress plugin only. See [The credit](#the-credit).                                                                       |
@@ -146,6 +147,26 @@ With `transcript="on"`, the standard player has a Transcript button next to the 
 - The transcript's code loads when it is first opened, not before. The player mounts it itself, so it works from `@showfm/embed/svelte` too (`<PlayerCore transcript="on" />`), where no elements are registered; there the code is a dynamic import.
 - The transcript follows the element it is in, and takes its colours from it.
 - Embed snippets reserve the closed player's height; an open transcript adds to it. For a fixed height, use the iframe's transcript variant.
+
+### The transcript reader
+
+With `transcript="reader"`, the Transcript button opens the transcript as a full-screen reader instead of a panel: the player moves to the top in its compact layout, with the episode's title, a search field and the follow-along text under it (the listen page design, frames 2d and 2e). It is the same transcript, with search, word-by-word highlighting, a click to seek and "Back to now".
+
+```html
+<showfm-player id="player" episode="..." transcript="reader"></showfm-player>
+<button type="button" onclick="document.getElementById('player').openTranscript()">
+	Read the transcript
+</button>
+```
+
+- **One player.** The reader holds the player itself, not a copy: the audio plays on through opening and closing, and there is only ever one `<audio>` element.
+- **A modal dialog.** The rest of the page is inert and does not scroll behind it. Escape closes it (after clearing a search, if one is typed), and so does its Close button, which takes focus when it opens. On close, focus goes back to whatever opened it.
+- **Your own button.** `openTranscript()` opens it from a button of your own and returns `true`, or `false` when the player is not ready or offers no transcript (the episode has none, or its audio or transcript is not on show.fm), so you can link to the transcript file instead. The player fires `showfm:transcript-close` (bubbles, composed) after focus has gone back. With `on` or `open`, `openTranscript()` opens the panel. The method is there once the element has connected, a moment after it is added to the page, so call it from a click or another later event.
+- **Speaker photos.** Each speaker's first line in a turn shows their photo from the episode's credits (the API's `people[].photo_url`, matched by name), or their initials when there is none or it fails to load. `speaker-photos="off"` shows initials for everyone. Only the reader shows them; the panel does not.
+- **The header** reads "Transcript" over the season, the episode number and the title. When the title already carries the numbering, the title stands alone.
+- **Older browsers.** A browser without a modal `<dialog>` (Safari before 15.4, Firefox before 98) gets the transcript under the player, as with `on`.
+- **Not in an iframe.** A reader cannot cover the page from inside an iframe, so use the element. The iframe keeps `?transcript=open`.
+- From Svelte: `<PlayerCore bind:this={player} transcript="reader" ontranscriptclose={...} />`, then `player.openTranscript()`. `speakerPhotos={false}` is the attribute's `off`.
 
 ### The mini-player option
 
@@ -465,7 +486,7 @@ The constants are exported as `PLAYER_MIN_HEIGHTS` and `IFRAME_HEIGHTS`. CI meas
 
 ## Privacy
 
-The player, the list, the play button, the mini-player and the transcript set no cookies and use no storage. The transcript fetches the episode's WebVTT from show.fm's media host. They request episode data from the show.fm API, and the audio only loads when the listener presses play (`preload="none"`). With `load="click"` an element requests nothing at all until the visitor presses it.
+The player, the list, the play button, the mini-player and the transcript set no cookies and use no storage. The transcript fetches the episode's WebVTT from show.fm's media host. The transcript reader also loads the speakers' photos from the addresses in the episode's credits; with `speaker-photos="off"` it loads none. They request episode data from the show.fm API, and the audio only loads when the listener presses play (`preload="none"`). With `load="click"` an element requests nothing at all until the visitor presses it.
 
 ## Origin
 

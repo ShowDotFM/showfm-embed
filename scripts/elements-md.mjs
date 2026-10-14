@@ -27,6 +27,12 @@ const MINI_PLAYER_EVENT = 'showfm:mini-player';
 export const EVENTS = {
 	'showfm-player': [
 		{
+			name: 'showfm:transcript-close',
+			type: 'Event',
+			description:
+				'Fired when the transcript reader (`transcript="reader"`) has closed and focus has gone back to what opened it; bubbles and is composed. A page that opened the reader with `openTranscript()` from its own button can move focus elsewhere here.'
+		},
+		{
 			name: MINI_PLAYER_EVENT,
 			type: 'CustomEvent<HTMLAudioElement>',
 			description:
@@ -73,7 +79,7 @@ export const PAGE_EVENTS = [
 
 /**
  * The parts of a Custom Elements Manifest 2.1.0 declaration this renders.
- * @typedef {{ name: string, description?: string, type?: { text: string }, default?: string, syntax?: string, fieldName?: string, attribute?: string, kind?: string }} Item
+ * @typedef {{ name: string, description?: string, type?: { text: string }, return?: { type?: { text: string } }, default?: string, syntax?: string, fieldName?: string, attribute?: string, kind?: string }} Item
  * @typedef {{ tagName?: string, description?: string, deprecated?: boolean | string, attributes?: Item[], members?: Item[], events?: Item[], slots?: Item[], cssProperties?: Item[], cssParts?: Item[] }} Declaration
  * @typedef {{ modules: { declarations?: Declaration[] }[] }} Manifest
  */
@@ -149,6 +155,22 @@ function renderElement(declaration) {
 		),
 		''
 	);
+	const methods = (declaration.members ?? []).filter((member) => member.kind === 'method');
+	if (methods.length) {
+		parts.push(
+			section(
+				'Methods',
+				methods.map((method) => [
+					code(`${method.name}()`),
+					code(method.return?.type?.text),
+					cell(method.description)
+				]),
+				['Method', 'Returns', 'Description'],
+				'None.'
+			),
+			''
+		);
+	}
 	if (properties.length) {
 		parts.push(
 			section(

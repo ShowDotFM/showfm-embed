@@ -356,3 +356,139 @@ input[aria-disabled='true'] {
 .skel div:nth-child(even) span:nth-child(3) {
 	width: 72%;
 }
+
+/* ── the reader (the player's transcript="reader", frames 2d and 2e) ──
+   The transcript and its header have no boxes of their own here: the
+   search row, the text and the header's two parts are items of the
+   player's dialog grid, which sets the rows and columns (PlayerCore.svelte).
+   On a phone: close and titles, the player, search, the text. From 720px:
+   titles, search and close in one row, the player, the text. */
+.rd,
+.rd .head {
+	display: contents;
+}
+.rd .label {
+	display: none;
+}
+.rd .find {
+	grid-area: 3 / 1 / 4 / -1;
+}
+.rd .field {
+	height: 40px;
+}
+.rd .scroll,
+.rd .msg {
+	grid-area: 4 / 1 / 5 / -1;
+	align-self: stretch;
+	min-height: 0;
+	margin: 0 -14px;
+	padding: 14px 14px 64px;
+	overscroll-behavior: contain;
+}
+.rd .msg {
+	padding-bottom: 14px;
+}
+.rd .lines,
+.rd .msg > * {
+	max-width: 720px;
+	width: 100%;
+	margin-inline: auto;
+}
+.rd .spk {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	min-width: 0;
+	font-size: calc(12px * var(--f));
+	letter-spacing: 0;
+	text-transform: none;
+	color: var(--pp-fg-strong);
+}
+.av {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border-radius: 9999px;
+	object-fit: cover;
+	background: var(--pp-tint);
+	color: var(--pp-accent-text, var(--pp-accent));
+	font-size: 9.5px;
+	font-weight: 700;
+	line-height: 1;
+}
+.rd-close {
+	grid-area: 1 / 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	border: 0;
+	border-radius: 9999px;
+	background: var(--pp-ctrl-bg);
+	color: var(--pp-fg-strong);
+}
+.rd-titles {
+	grid-area: 1 / 2;
+	min-width: 0;
+}
+.rd-kicker,
+.rd-context {
+	margin: 0;
+	line-height: 1.3;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.rd-kicker {
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--pp-fg-strong);
+}
+.rd-context {
+	font-size: 11.5px;
+	color: var(--pp-muted);
+}
+@media (min-width: 720px) {
+	.rd .find {
+		grid-area: 1 / 2;
+	}
+	.rd .field {
+		height: 38px;
+	}
+	.rd .scroll,
+	.rd .msg {
+		grid-area: 3 / 1 / 4 / -1;
+		margin: 0 -24px;
+		padding: 18px 24px 64px;
+	}
+	.rd .msg {
+		padding-bottom: 18px;
+	}
+	.av {
+		width: 24px;
+		height: 24px;
+		font-size: 10px;
+	}
+	.rd-titles {
+		grid-area: 1 / 1;
+	}
+	.rd-close {
+		grid-area: 1 / 3;
+		width: 34px;
+		height: 34px;
+		border: 1px solid var(--pp-ctrl-border);
+		border-radius: 7px;
+		background: var(--pp-bg);
+	}
+	.rd-kicker {
+		font-size: 14px;
+	}
+	.rd-context {
+		font-size: 12px;
+	}
+}

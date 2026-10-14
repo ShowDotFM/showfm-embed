@@ -18,6 +18,12 @@ export interface PlayerEpisodeData {
 	};
 	artwork: { url: string | null };
 	links: { listen: string };
+	/**
+	 * The credited people, in the show's order. The transcript reader puts
+	 * each one's photo beside their lines. Optional, as is `photo_url`:
+	 * payloads cached before 1.7 carry neither.
+	 */
+	people?: { name: string; role?: string | null; photo_url?: string | null }[] | null;
 	/** The published WebVTT transcript, when the episode has one. */
 	transcript?: { url: string; type?: string } | null;
 	podcast: {
