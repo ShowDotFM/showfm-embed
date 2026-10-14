@@ -107,7 +107,10 @@ const FR: Strings &
 	jumpTo: 'Aller à {time}, {speaker}',
 	jumpToTime: 'Aller à {time}',
 	backToNow: 'Revenir à la lecture · {time}',
-	closeTranscript: 'Fermer la transcription'
+	closeTranscript: 'Fermer la transcription',
+	readerLabel: 'Transcription\u202f: {title}',
+	readerSeason: 'Saison {n}',
+	readerEpisode: 'Épisode {n}'
 };
 
 export default FR;

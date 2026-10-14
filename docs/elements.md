@@ -32,16 +32,24 @@ The show.fm podcast player. Set `episode` to play one episode, or `podcast` to p
 | `heading-level` | `'2' \| '3' \| '4' \| '5' \| '6'` | - | Wraps the episode title in a heading of this level. Absent, the title is a link and no heading is emitted. |
 | `credit` | `'auto' \| 'on' \| 'off'` | `'auto'` | The "Powered by show.fm" footer. `auto` and `off` hide it only when the show's plan includes branding removal and the show has turned it off (the API's `branding.show_powered_by` is false); with no payload it shows. `on` always shows it. With `platform="wordpress"`, `off` hides it for any show. It shows once per page, on the first embed that shows it. |
 | `load` | `'click'` | - | `click` draws a facade and requests nothing from show.fm until the visitor presses it. `showfm.load()` loads every facade at once. |
-| `transcript` | `'on' \| 'open'` | - | `on` adds a Transcript button that opens the follow-along transcript under the player, which grows downwards; `open` opens it at once. Only the standard size offers it, and only when the audio and the transcript are on show.fm. Absent, there is no button. |
+| `transcript` | `'on' \| 'open' \| 'reader'` | - | `on` adds a Transcript button that opens the follow-along transcript under the player, which grows downwards; `open` opens it at once. `reader` makes the button open a full-screen reader instead: a modal dialog with the player pinned on top, search, and speakers' photos. Only the standard size has the button, and only when the audio and the transcript are on show.fm. Absent, there is no button. |
+| `speaker-photos` | `'on' \| 'off'` | `'on'` | The reader (`transcript="reader"`) shows each speaker's photo from the episode's credits beside their lines. `off` shows their initials instead, as for a speaker with no photo. |
 | `strings` | `Partial<Record<string, string>>` | - | Overrides for visible strings, by key, usually set as a property. `window.showfmStrings` sets them for every element. |
 | `mini-player` | `'on' \| 'off'` | `'off'` | `on`: when the visitor scrolls the player out of view while it plays, the page's mini-player takes over its audio, so playback carries on with seek, skip, speed and the time left. Off by default. |
 | `mini-player-position` | `'left' \| 'right'` | `'right'` | The corner the collapsed mini-player sits in, when this element opens it. `--showfm-bottom-offset` lifts it. |
 | `platform` | `'wordpress'` | - | For the show.fm WordPress plugin only, which passes `credit="off"` unless the site owner opts in: a credit in plugin code must be opt-in (WordPress.org guideline 10). With it, `credit="off"` hides "Powered by show.fm" for any show. Other sites should not set it. |
 
+### Methods
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `openTranscript()` | `boolean` | Opens the transcript: the reader with `transcript="reader"`, the panel under the player with `on` or `open`. Returns false when the player is not ready or offers no transcript, so a page can link to the transcript file instead. The reader opens once its code has loaded, and focus goes back to whatever had it when it closes. |
+
 ### Events
 
 | Event | Type | Description |
 | --- | --- | --- |
+| `showfm:transcript-close` | `Event` | Fired when the transcript reader (`transcript="reader"`) has closed and focus has gone back to what opened it; bubbles and is composed. A page that opened the reader with `openTranscript()` from its own button can move focus elsewhere here. |
 | `showfm:mini-player` | `CustomEvent<HTMLAudioElement>` | Fired each time the player starts playing; bubbles and is composed. `detail` is its audio element. The page's mini-player listens for it to take that audio over when the player has `mini-player="on"` and scrolls out of view. |
 
 ### Slots
@@ -106,16 +114,24 @@ The pre-rebrand name of `showfm-player`. It stays registered so embeds already o
 | `heading-level` | `'2' \| '3' \| '4' \| '5' \| '6'` | - | Wraps the episode title in a heading of this level. Absent, the title is a link and no heading is emitted. |
 | `credit` | `'auto' \| 'on' \| 'off'` | `'auto'` | The "Powered by show.fm" footer. `auto` and `off` hide it only when the show's plan includes branding removal and the show has turned it off (the API's `branding.show_powered_by` is false); with no payload it shows. `on` always shows it. With `platform="wordpress"`, `off` hides it for any show. It shows once per page, on the first embed that shows it. |
 | `load` | `'click'` | - | `click` draws a facade and requests nothing from show.fm until the visitor presses it. `showfm.load()` loads every facade at once. |
-| `transcript` | `'on' \| 'open'` | - | `on` adds a Transcript button that opens the follow-along transcript under the player, which grows downwards; `open` opens it at once. Only the standard size offers it, and only when the audio and the transcript are on show.fm. Absent, there is no button. |
+| `transcript` | `'on' \| 'open' \| 'reader'` | - | `on` adds a Transcript button that opens the follow-along transcript under the player, which grows downwards; `open` opens it at once. `reader` makes the button open a full-screen reader instead: a modal dialog with the player pinned on top, search, and speakers' photos. Only the standard size has the button, and only when the audio and the transcript are on show.fm. Absent, there is no button. |
+| `speaker-photos` | `'on' \| 'off'` | `'on'` | The reader (`transcript="reader"`) shows each speaker's photo from the episode's credits beside their lines. `off` shows their initials instead, as for a speaker with no photo. |
 | `strings` | `Partial<Record<string, string>>` | - | Overrides for visible strings, by key, usually set as a property. `window.showfmStrings` sets them for every element. |
 | `mini-player` | `'on' \| 'off'` | `'off'` | `on`: when the visitor scrolls the player out of view while it plays, the page's mini-player takes over its audio, so playback carries on with seek, skip, speed and the time left. Off by default. |
 | `mini-player-position` | `'left' \| 'right'` | `'right'` | The corner the collapsed mini-player sits in, when this element opens it. `--showfm-bottom-offset` lifts it. |
 | `platform` | `'wordpress'` | - | For the show.fm WordPress plugin only, which passes `credit="off"` unless the site owner opts in: a credit in plugin code must be opt-in (WordPress.org guideline 10). With it, `credit="off"` hides "Powered by show.fm" for any show. Other sites should not set it. |
 
+### Methods
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `openTranscript()` | `boolean` | Opens the transcript: the reader with `transcript="reader"`, the panel under the player with `on` or `open`. Returns false when the player is not ready or offers no transcript, so a page can link to the transcript file instead. The reader opens once its code has loaded, and focus goes back to whatever had it when it closes. |
+
 ### Events
 
 | Event | Type | Description |
 | --- | --- | --- |
+| `showfm:transcript-close` | `Event` | Fired when the transcript reader (`transcript="reader"`) has closed and focus has gone back to what opened it; bubbles and is composed. A page that opened the reader with `openTranscript()` from its own button can move focus elsewhere here. |
 | `showfm:mini-player` | `CustomEvent<HTMLAudioElement>` | Fired each time the player starts playing; bubbles and is composed. `detail` is its audio element. The page's mini-player listens for it to take that audio over when the player has `mini-player="on"` and scrolls out of view. |
 
 ### Slots

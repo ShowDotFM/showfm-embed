@@ -39,9 +39,13 @@ export interface ShowfmPlayerAttributes {
 	load?: 'click';
 	/**
 	 * `on`: a Transcript button that opens the follow-along transcript under
-	 * the player. `open`: open at once. Standard size and show.fm media only.
+	 * the player. `open`: open at once. `reader`: the button opens a
+	 * full-screen reader with the player pinned on top. Standard size and
+	 * show.fm media only.
 	 */
-	transcript?: 'on' | 'open';
+	transcript?: 'on' | 'open' | 'reader';
+	/** `off`: the reader shows speakers' initials instead of their photos. */
+	'speaker-photos'?: 'on' | 'off';
 	/**
 	 * `on`: when the player scrolls out of view while it plays, the page's
 	 * mini-player takes over its audio. Absent is `off`.
@@ -70,8 +74,15 @@ export interface ShowfmPlayerElement extends HTMLElement {
 	credit: 'auto' | 'on' | 'off' | string;
 	load: string;
 	transcript: string;
+	speakerPhotos: string;
 	/** Overrides for visible strings, by key (see the README). */
 	strings: Partial<Record<StringKey, string>> | undefined;
+	/**
+	 * Opens the transcript: the reader with `transcript="reader"`, the panel
+	 * with `on` or `open`. False when the player is not ready or offers no
+	 * transcript. The reader fires `showfm:transcript-close` when it closes.
+	 */
+	openTranscript(): boolean;
 }
 
 /** Attributes of <showfm-episodes>. */

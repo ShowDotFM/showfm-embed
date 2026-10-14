@@ -8,6 +8,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Page, Route } from '@playwright/test';
 import {
+	MAYA_PHOTO,
 	TRANSCRIPT_AUDIO,
 	TRANSCRIPT_VTT,
 	conversationVtt,
@@ -19,6 +20,12 @@ export const PAGE_ORIGIN = 'https://host.example.test';
 export const API_ORIGIN = 'https://api.example.test';
 
 const dist = (path: string) => fileURLToPath(new URL(`../../dist/cdn/${path}`, import.meta.url));
+
+/** A 2×2 PNG for a speaker's photo. */
+const PHOTO = Buffer.from(
+	'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGOoUzoHRAwQCgAm1gW54gDppQAAAABJRU5ErkJggg==',
+	'base64'
+);
 
 /** `seconds` of silence as 8 kHz, 8-bit mono WAV, so playback really runs. */
 function silence(seconds: number) {
@@ -120,6 +127,9 @@ export async function serveTranscript(
 				contentType: 'text/vtt',
 				headers: { 'access-control-allow-origin': '*' }
 			});
+		}
+		if (url === MAYA_PHOTO) {
+			return route.fulfill({ body: PHOTO, contentType: 'image/png' });
 		}
 		if (url.startsWith(TRANSCRIPT_AUDIO)) {
 			// Byte ranges, so the audio can be seeked as on the real media host.

@@ -53,6 +53,8 @@ export interface ControllerEpisode {
 	 * transcript then asks the public API for the episode.
 	 */
 	transcript?: { url?: string | null } | null;
+	/** The credited people, for the transcript reader's speaker photos. */
+	people?: { name: string; photo_url?: string | null }[] | null;
 }
 
 /** A message the shared audio's owner reports when its episode cannot play. */

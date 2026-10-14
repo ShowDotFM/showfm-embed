@@ -17,7 +17,7 @@
 	  + focus ring preserved). Accessibility is the point of this player.
 -->
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import type { PlayerEpisodeData, PlayerSize, PlayerTheme } from './types';
 	import { createLook } from './look.svelte';
 	import { genPeaks, drawWave } from './waveform';
@@ -40,6 +40,8 @@
 		lang = null,
 		strings = undefined,
 		transcript = null,
+		speakerPhotos = true,
+		ontranscriptclose = undefined,
 		currentTime = $bindable(0)
 	}: {
 		episode: PlayerEpisodeData;
@@ -61,13 +63,25 @@
 		strings?: StringOverrides;
 		/**
 		 * The transcript option: `on` adds a Transcript button that opens the
-		 * follow-along transcript under the player, `open` opens it at once.
-		 * Only the standard size offers it, and only for audio and a VTT on
-		 * show.fm's media hosts (design page 9). The transcript's code loads
-		 * when it is first opened (a lazy chunk in v1.js, a dynamic import
-		 * elsewhere), so it works from `@showfm/embed/svelte` too.
+		 * follow-along transcript under the player, `open` opens it at once,
+		 * and `reader` opens it as a full-screen reader (a modal dialog) with
+		 * this player pinned on top (frames 2d and 2e of the listen page
+		 * design). Only the standard size has the button, and only for audio
+		 * and a VTT on show.fm's media hosts (design page 9). The transcript's
+		 * code loads when it is first opened (a lazy chunk in v1.js, a dynamic
+		 * import elsewhere), so it works from `@showfm/embed/svelte` too.
 		 */
 		transcript?: string | null;
+		/**
+		 * The reader shows each speaker's photo from the payload's `people`.
+		 * False shows their initials instead, as for a speaker with no photo.
+		 */
+		speakerPhotos?: boolean;
+		/**
+		 * Called when the reader has closed and focus has gone back, after
+		 * the `showfm:transcript-close` event.
+		 */
+		ontranscriptclose?: () => void;
 		/**
 		 * Playback position in seconds, readable by a parent. Bindable so the
 		 * listen page's transcript reader can follow along and highlight the
@@ -97,6 +111,32 @@
 	 */
 	export function play() {
 		if (!isPlaying) void togglePlay();
+	}
+
+	/**
+	 * Opens the transcript: the reader with `transcript="reader"`, the panel
+	 * under the controls with `on` or `open`. False when this player offers
+	 * no transcript, so a page can link to the file instead. The reader's
+	 * code may still be on its way: it opens once it is here. Focus goes back
+	 * to whatever had it when the reader closes.
+	 */
+	export function openTranscript(): boolean {
+		if (!offerTranscript) return false;
+		if (!reader) toggled = true;
+		else if (!reading) {
+			// The focused element, inside any shadow roots: the card button on
+			// the page, or this player's own Transcript button.
+			let active = document.activeElement;
+			while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+			opener = active as HTMLElement | null;
+			void loadChunk(import('./transcript.svelte.js')).then(() => {
+				// The player keeps its place on the page while its body is in the
+				// reader, so nothing moves under it and nothing jumps on close.
+				held = rootEl!.offsetHeight;
+				reading = true;
+			});
+		}
+		return true;
 	}
 
 	/** Move focus to the play button (after a facade swaps for the player). */
@@ -152,7 +192,18 @@
 	let sharedResetTimer: ReturnType<typeof setTimeout> | null = null;
 	let waveResizeTick = $state(0);
 
-	const isCompact = $derived(size === 'compact');
+	// The reader: this player's own body, in a modal dialog that exists only
+	// while it is open. The <audio> stays where it is, outside the dialog, so
+	// opening and closing never restarts, moves or doubles it.
+	let reading = $state(false);
+	let dialogEl = $state<HTMLDialogElement | null>(null);
+	let readerHeadEl = $state<HTMLElement | null>(null);
+	let transcriptButtonEl = $state<HTMLButtonElement | null>(null);
+	let opener: HTMLElement | null = null;
+	let held = $state(0);
+
+	// In the reader the player is compact, pinned at the top (frames 2d, 2e).
+	const isCompact = $derived(size === 'compact' || reading);
 	const duration = $derived(metadataDuration ?? episode.audio.duration_seconds ?? 0);
 	const playbackRate = $derived(RATES[rateIndex]);
 	const sliderValue = $derived(
@@ -191,28 +242,51 @@
 	);
 	const showCredit = $derived(credit ?? episode.podcast.branding.show_powered_by);
 	// Only for audio and a VTT on show.fm's media hosts (canOfferTranscript).
+	const reader = $derived(transcript === 'reader');
 	const offerTranscript = $derived(
-		(transcript === 'on' || transcript === 'open') &&
+		(transcript === 'on' || transcript === 'open' || reader) &&
 			hostedAudio &&
 			isShowfmMediaUrl(episode.transcript?.url, mediaHosts())
 	);
 	// The visitor's toggle, once they have pressed the button.
 	let toggled = $state<boolean | null>(null);
-	const transcriptOpen = $derived(toggled ?? transcript === 'open');
+	const transcriptOpen = $derived(!reader && (toggled ?? transcript === 'open'));
 	let transcriptEl = $state<HTMLElement | null>(null);
 
-	// The transcript mounts into its own element under the controls, in a
-	// shadow root of its own, following this player's audio and episode.
+	async function readerClosed() {
+		reading = false;
+		await tick();
+		// Back to what opened it, else this player's Transcript button (the
+		// one pressed was in the body the reader held, and has been replaced).
+		(opener?.isConnected ? opener : transcriptButtonEl)?.focus();
+		opener = null;
+		rootEl?.dispatchEvent(new Event('showfm:transcript-close', { bubbles: true, composed: true }));
+		ontranscriptclose?.();
+	}
+
+	// The transcript mounts into its own element under the controls, or in
+	// the reader, in a shadow root of its own, following this player's audio
+	// and episode. In the reader it also draws the header and opens the
+	// dialog, and says when the dialog has closed.
 	$effect(() => {
 		const target = transcriptEl;
 		const current = episode;
 		if (!target) return;
+		const dialog = dialogEl;
+		const head = readerHeadEl;
 		let live = true;
 		let connection: ((connected: boolean) => void) | undefined;
 		loadChunk<typeof import('./transcript.svelte.js')>(import('./transcript.svelte.js')).then(
 			(chunk) => {
 				if (live)
-					connection = chunk.mountTranscript(target, { audio: () => audioEl, episode: current });
+					connection = chunk.mountTranscript(target, {
+						audio: () => audioEl,
+						episode: current,
+						reader:
+							dialog && head
+								? { dialog, head, photos: () => speakerPhotos, closed: readerClosed }
+								: undefined
+					});
 			}
 		);
 		return () => {
@@ -673,73 +747,7 @@
 	{/if}
 {/snippet}
 
-<div
-	bind:this={rootEl}
-	class="player"
-	style={look.vars}
-	role="group"
-	aria-label={formatString(s.playerLabel, { title: episode.title })}
-	part="container"
->
-	<!-- Mounted independently of which body renders: the blocked card must NOT
-	     unmount it, or the listener's position and buffer die with it. Only a
-	     genuine media error (hasError) unmounts, because retryPlayback's whole
-	     job is to remount and reload. -->
-	{#if audioSrc && !hasError}
-		<audio
-			bind:this={audioEl}
-			src={audioSrc}
-			preload="none"
-			onplay={() => {
-				isPlaying = true;
-				// Playing out of the blocked card unmounts the Try again that
-				// was just pressed, so focus follows to the Play replacing it.
-				// Armed HERE, next to the line that causes the swap, rather
-				// than before play(): a plain success from the normal player
-				// only relabels Play→Pause, swaps nothing, and must not arm.
-				if (blocked) swapFocus = true;
-				blocked = false;
-				announcement = s.playing;
-				// For <showfm-player mini-player="on">: the page's mini-player
-				// (play-element.ts) may take this audio over once the player
-				// scrolls out of view. It ignores players without the attribute.
-				rootEl!.dispatchEvent(
-					new CustomEvent('showfm:mini-player', {
-						bubbles: true,
-						composed: true,
-						detail: audioEl
-					})
-				);
-			}}
-			onpause={() => {
-				isPlaying = false;
-				announcement = s.paused;
-			}}
-			onended={() => {
-				isPlaying = false;
-				announcement = s.finished;
-			}}
-			ontimeupdate={() => {
-				if (audioEl && !scrubbing) currentTime = audioEl.currentTime;
-			}}
-			onloadedmetadata={() => {
-				if (audioEl && Number.isFinite(audioEl.duration)) metadataDuration = audioEl.duration;
-			}}
-			onwaiting={() => (isBuffering = true)}
-			onplaying={() => (isBuffering = false)}
-			oncanplay={() => (isBuffering = false)}
-			onerror={() => {
-				// Arrives on its own (a failed load, a dropped connection), with
-				// no press behind it — moving focus here would yank it from
-				// wherever the visitor actually is on the host page.
-				swapFocus = false;
-				blocked = false;
-				hasError = true;
-				isPlaying = false;
-			}}
-		></audio>
-	{/if}
-
+{#snippet body()}
 	<!-- Exactly one body renders. Order encodes precedence: a broken media
 	     element outranks a refused play attempt (the two states are already
 	     kept mutually exclusive in script, this makes it structural). -->
@@ -877,9 +885,11 @@
 					     grows downwards (design page 3.1 A). -->
 					<button
 						type="button"
+						bind:this={transcriptButtonEl}
 						class="rate-btn tr-btn"
-						aria-expanded={transcriptOpen}
-						onclick={() => (toggled = !transcriptOpen)}
+						aria-expanded={reader ? undefined : transcriptOpen}
+						aria-haspopup={reader ? 'dialog' : undefined}
+						onclick={() => (reader ? openTranscript() : (toggled = !transcriptOpen))}
 						part="transcript"
 					>
 						<svg
@@ -993,6 +1003,87 @@
 			</div>
 			{@render poweredBy()}
 		</div>
+	{/if}
+{/snippet}
+
+<div
+	bind:this={rootEl}
+	class="player"
+	style={reading ? `${look.vars};min-height:${held}px` : look.vars}
+	role="group"
+	aria-label={formatString(s.playerLabel, { title: episode.title })}
+	part="container"
+>
+	<!-- Mounted independently of which body renders: the blocked card must NOT
+	     unmount it, or the listener's position and buffer die with it. Only a
+	     genuine media error (hasError) unmounts, because retryPlayback's whole
+	     job is to remount and reload. -->
+	{#if audioSrc && !hasError}
+		<audio
+			bind:this={audioEl}
+			src={audioSrc}
+			preload="none"
+			onplay={() => {
+				isPlaying = true;
+				// Playing out of the blocked card unmounts the Try again that
+				// was just pressed, so focus follows to the Play replacing it.
+				// Armed HERE, next to the line that causes the swap, rather
+				// than before play(): a plain success from the normal player
+				// only relabels Play→Pause, swaps nothing, and must not arm.
+				if (blocked) swapFocus = true;
+				blocked = false;
+				announcement = s.playing;
+				// For <showfm-player mini-player="on">: the page's mini-player
+				// (play-element.ts) may take this audio over once the player
+				// scrolls out of view. It ignores players without the attribute.
+				rootEl!.dispatchEvent(
+					new CustomEvent('showfm:mini-player', {
+						bubbles: true,
+						composed: true,
+						detail: audioEl
+					})
+				);
+			}}
+			onpause={() => {
+				isPlaying = false;
+				announcement = s.paused;
+			}}
+			onended={() => {
+				isPlaying = false;
+				announcement = s.finished;
+			}}
+			ontimeupdate={() => {
+				if (audioEl && !scrubbing) currentTime = audioEl.currentTime;
+			}}
+			onloadedmetadata={() => {
+				if (audioEl && Number.isFinite(audioEl.duration)) metadataDuration = audioEl.duration;
+			}}
+			onwaiting={() => (isBuffering = true)}
+			onplaying={() => (isBuffering = false)}
+			oncanplay={() => (isBuffering = false)}
+			onerror={() => {
+				// Arrives on its own (a failed load, a dropped connection), with
+				// no press behind it — moving focus here would yank it from
+				// wherever the visitor actually is on the host page.
+				swapFocus = false;
+				blocked = false;
+				hasError = true;
+				isPlaying = false;
+			}}
+		></audio>
+	{/if}
+
+	{#if reading}
+		<!-- The reader (frames 2d and 2e): the header, this player's body and
+		     the transcript, laid out by the dialog's grid. The header and the
+		     transcript come from the transcript's chunk, which opens it. -->
+		<dialog bind:this={dialogEl} class="rd">
+			<div class="rd-head" bind:this={readerHeadEl}></div>
+			{@render body()}
+			<div class="rd-tr" {lang} bind:this={transcriptEl}></div>
+		</dialog>
+	{:else}
+		{@render body()}
 	{/if}
 
 	<span class="visually-hidden" role="status" aria-live="polite">{announcement}</span>
@@ -1400,6 +1491,59 @@
 		}
 		.transport:has(.tr-btn) .transport-btn {
 			width: 36px;
+		}
+	}
+
+	/* ── the reader (frames 2d and 2e) ───────── */
+	/* One grid for the dialog, its header and the transcript: their hosts
+	   take no box (display: contents), so the close button, the titles, the
+	   search row and the text are its items. transcript.css places them on
+	   these rows and columns. On a phone: close and titles, the player, the
+	   search row, the text. From 720px: titles, search and close in a row,
+	   then the player, then the text. */
+	.rd {
+		position: fixed;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		max-width: none;
+		max-height: none;
+		margin: 0;
+		padding: 12px 14px 0;
+		border: 0;
+		display: grid;
+		grid-template: auto auto auto minmax(0, 1fr) / auto minmax(0, 1fr);
+		gap: 10px;
+		align-items: center;
+		color: var(--pp-fg);
+		background: var(--pp-bg);
+	}
+	/* The header band's rule. */
+	.rd::before {
+		content: '';
+		grid-area: 1 / 1 / 4 / -1;
+		align-self: stretch;
+		margin: -12px -14px -10px;
+		border-bottom: 1px solid var(--pp-border);
+	}
+	.rd > .body {
+		grid-area: 2 / 1 / 3 / -1;
+		border: 1px solid var(--pp-border);
+		border-radius: clamp(0px, var(--showfm-radius, 14px), 28px);
+	}
+	.rd-head,
+	.rd-tr {
+		display: contents;
+	}
+	@media (min-width: 720px) {
+		.rd {
+			padding: 14px 24px 0;
+			grid-template: auto auto minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 260px) auto;
+			gap: 14px 18px;
+		}
+		.rd::before {
+			grid-area: 1 / 1 / 2 / -1;
+			margin: -14px -24px -7px;
 		}
 	}
 
