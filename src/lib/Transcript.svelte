@@ -562,10 +562,10 @@
 			parts.push(formatString(t.readerSeason, { n: episode.season_number }));
 		if (episode?.episode_number)
 			parts.push(formatString(t.readerEpisode, { n: episode.episode_number }));
-		const lower = title.toLocaleLowerCase();
-		return parts.every((part) => lower.includes(part.toLocaleLowerCase()))
-			? title
-			: [...parts, title].filter(Boolean).join(' · ');
+		// Whole numbers only: "Episode 1" is not in "Episode 12: …".
+		const inTitle = (part: string) =>
+			new RegExp(`${part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\d)`, 'iu').test(title);
+		return parts.every(inTitle) ? title : [...parts, title].filter(Boolean).join(' · ');
 	});
 
 	$effect(() => {

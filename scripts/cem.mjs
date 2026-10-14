@@ -581,7 +581,7 @@ export function buildManifest() {
 				name: 'openTranscript',
 				return: { type: { text: 'boolean' } },
 				description:
-					'Opens the transcript: the reader with `transcript="reader"`, the panel under the player with `on` or `open`. Returns false when the player is not ready or offers no transcript, so a page can link to the transcript file instead. The reader opens once its code has loaded, and focus goes back to whatever had it when it closes.'
+					'Opens the transcript: the reader with `transcript="reader"`, the panel under the player with `on` or `open`. Returns false when the player is not ready or offers no transcript, so a page can link to the transcript file instead. The method is there once the element has connected (a moment after it is added to the page), so call it from a later event such as a click. The reader opens once its code has loaded, and focus goes back to whatever had it when it closes.'
 			}
 		],
 		slots: [

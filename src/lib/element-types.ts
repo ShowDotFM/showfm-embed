@@ -81,6 +81,7 @@ export interface ShowfmPlayerElement extends HTMLElement {
 	 * Opens the transcript: the reader with `transcript="reader"`, the panel
 	 * with `on` or `open`. False when the player is not ready or offers no
 	 * transcript. The reader fires `showfm:transcript-close` when it closes.
+	 * There once the element has connected, a moment after it is added.
 	 */
 	openTranscript(): boolean;
 }

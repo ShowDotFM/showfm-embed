@@ -121,7 +121,8 @@
 	 * to whatever had it when the reader closes.
 	 */
 	export function openTranscript(): boolean {
-		if (!offerTranscript) return false;
+		// The panel is the standard body's; the reader opens at either size.
+		if (!offerTranscript || (!reader && size === 'compact')) return false;
 		if (!reader) toggled = true;
 		else if (!reading) {
 			// The focused element, inside any shadow roots: the card button on
@@ -130,9 +131,11 @@
 			while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
 			opener = active as HTMLElement | null;
 			void loadChunk(import('./transcript.svelte.js')).then(() => {
+				// The player may have gone, or stopped offering it, meanwhile.
+				if (!rootEl || !reader || !offerTranscript) return;
 				// The player keeps its place on the page while its body is in the
 				// reader, so nothing moves under it and nothing jumps on close.
-				held = rootEl!.offsetHeight;
+				held = rootEl.offsetHeight;
 				reading = true;
 			});
 		}
@@ -747,6 +750,10 @@
 	{/if}
 {/snippet}
 
+{#snippet status()}
+	<span class="visually-hidden" role="status" aria-live="polite">{announcement}</span>
+{/snippet}
+
 {#snippet body()}
 	<!-- Exactly one body renders. Order encodes precedence: a broken media
 	     element outranks a refused play attempt (the two states are already
@@ -1081,12 +1088,14 @@
 			<div class="rd-head" bind:this={readerHeadEl}></div>
 			{@render body()}
 			<div class="rd-tr" {lang} bind:this={transcriptEl}></div>
+			<!-- In the dialog while it is open: everything outside a modal
+			     dialog is inert, and an inert live region is never heard. -->
+			{@render status()}
 		</dialog>
 	{:else}
 		{@render body()}
+		{@render status()}
 	{/if}
-
-	<span class="visually-hidden" role="status" aria-live="polite">{announcement}</span>
 </div>
 
 <style>
@@ -1501,7 +1510,9 @@
 	   these rows and columns. On a phone: close and titles, the player, the
 	   search row, the text. From 720px: titles, search and close in a row,
 	   then the player, then the text. */
-	.rd {
+	/* [open]: author CSS outranks the browser's dialog:not([open]) rule, and
+	   the dialog stays in the page for a moment after it closes. */
+	.rd[open] {
 		position: fixed;
 		inset: 0;
 		width: 100%;
@@ -1536,7 +1547,7 @@
 		display: contents;
 	}
 	@media (min-width: 720px) {
-		.rd {
+		.rd[open] {
 			padding: 14px 24px 0;
 			grid-template: auto auto minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 260px) auto;
 			gap: 14px 18px;

@@ -199,6 +199,40 @@ describe('the reader (transcript="reader")', () => {
 		expect(textOf(container).querySelector<HTMLElement>('.scroll')!.style.height).toBe('');
 	});
 
+	it('keeps the number when the title only carries a longer one', async () => {
+		const { container } = render(PlayerCore, {
+			props: {
+				episode: makeEpisode({
+					title: 'Season 10, Episode 12: The bakery',
+					season_number: 1,
+					episode_number: 1
+				}),
+				transcript: 'reader'
+			}
+		});
+		await openReader(container);
+		expect(headOf(container).querySelector('.rd-context')).toHaveTextContent(
+			'Season 1 · Episode 1 · Season 10, Episode 12: The bakery'
+		);
+	});
+
+	it('speaks from inside the dialog while open, where the page behind is inert', async () => {
+		const { container } = render(PlayerCore, {
+			props: { episode: makeEpisode(), transcript: 'reader' }
+		});
+		const status = () => container.querySelectorAll('[role="status"]');
+		expect(status()).toHaveLength(1);
+		expect(dialogOf(container)).toBeNull();
+		await openReader(container);
+		expect(status()).toHaveLength(1);
+		expect(dialogOf(container)!.contains(status()[0])).toBe(true);
+		await fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+		expect(status()[0]).toHaveTextContent('Playing');
+		dialogOf(container)!.close();
+		await vi.waitFor(() => expect(dialogOf(container)).toBeNull());
+		expect(status()).toHaveLength(1);
+	});
+
 	it('does not say the number twice when the title already carries it', async () => {
 		const { container } = render(PlayerCore, {
 			props: {
@@ -267,6 +301,12 @@ describe('the reader (transcript="reader")', () => {
 		const off = render(PlayerCore, { props: { episode: makeEpisode() } });
 		expect(off.component.openTranscript()).toBe(false);
 		off.unmount();
+		// The panel is the standard body's: a compact player has none to open.
+		const compact = render(PlayerCore, {
+			props: { episode: makeEpisode(), transcript: 'on', size: 'compact' }
+		});
+		expect(compact.component.openTranscript()).toBe(false);
+		compact.unmount();
 		const on = render(PlayerCore, { props: { episode: makeEpisode(), transcript: 'on' } });
 		expect(on.component.openTranscript()).toBe(true);
 		await tick();
@@ -287,6 +327,18 @@ describe('the reader (transcript="reader")', () => {
 		expect(document.documentElement.style.overflow).toBe('hidden');
 		view.unmount();
 		expect(document.documentElement.style.overflow).toBe('clip');
+	});
+
+	it('opens from a compact player too, which has no button of its own', async () => {
+		const view = render(PlayerCore, {
+			props: { episode: makeEpisode(), transcript: 'reader', size: 'compact' }
+		});
+		expect(screen.queryByRole('button', { name: 'Transcript' })).toBeNull();
+		expect(view.component.openTranscript()).toBe(true);
+		await vi.waitFor(
+			() => expect(textOf(view.container)?.querySelectorAll('.line')).toHaveLength(3),
+			{ timeout: 10_000 }
+		);
 	});
 
 	it('keeps its place on the page while open', async () => {
