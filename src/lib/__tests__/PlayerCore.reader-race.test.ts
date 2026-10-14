@@ -64,14 +64,15 @@ it('opens nothing when the player goes, or moves to another episode, before the 
 	expect(moved.component.openTranscript()).toBe(true);
 	await moved.rerender({ episode: episode('33333333-3333-4333-8333-333333333333', 'Three') });
 
-	// A request that nothing overtook still opens: the gate is not what stops the others.
+	// A request that nothing overtook still opens, even when the parent hands
+	// over a fresh copy of the same episode meanwhile: the gate is not what
+	// stops the others.
+	const four = '44444444-4444-4444-8444-444444444444';
 	const kept = render(PlayerCore, {
-		props: {
-			episode: episode('44444444-4444-4444-8444-444444444444', 'Four'),
-			transcript: 'reader'
-		}
+		props: { episode: episode(four, 'Four'), transcript: 'reader' }
 	});
 	expect(kept.component.openTranscript()).toBe(true);
+	await kept.rerender({ episode: episode(four, 'Four') });
 
 	gate.open();
 	// The first import compiles the transcript's code: wait for the one that opens.

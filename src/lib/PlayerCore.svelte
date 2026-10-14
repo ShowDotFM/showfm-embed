@@ -130,11 +130,11 @@
 			let active = document.activeElement;
 			while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
 			opener = active as HTMLElement | null;
-			const asked = episode;
+			const asked = episode.id;
 			void loadChunk(import('./transcript.svelte.js')).then(() => {
 				// The player may have gone, stopped offering it, or moved to
 				// another episode meanwhile: then this request opens nothing.
-				if (!rootEl || !reader || !offerTranscript || episode !== asked) return;
+				if (!rootEl || !reader || !offerTranscript || episode.id !== asked) return;
 				// The player keeps its place on the page while its body is in the
 				// reader, so nothing moves under it and nothing jumps on close.
 				held = rootEl.offsetHeight;
