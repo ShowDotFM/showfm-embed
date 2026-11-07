@@ -633,3 +633,16 @@ describe('branding rule', () => {
 		expect(screen.queryByRole('link', { name: /powered by show\.fm/i })).toBeNull();
 	});
 });
+
+it('marks the user audio download as UGC while keeping canonical links plain', () => {
+	const { container } = render(PlayerCore, { props: { episode: makeEpisode() } });
+	const download = container.querySelector('a[download]')!;
+	expect(download.getAttribute('href')).toContain('https://media.podcasterplus.com/audio.mp3?');
+	expect(download.getAttribute('rel')?.split(' ')).toEqual(
+		expect.arrayContaining(['nofollow', 'ugc', 'noopener'])
+	);
+	expect(download.getAttribute('target')).toBeNull();
+	for (const link of container.querySelectorAll('a:not([download])')) {
+		expect(link.getAttribute('rel')).not.toContain('nofollow');
+	}
+});

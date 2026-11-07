@@ -137,6 +137,8 @@ Set `episode` or `podcast`. With neither, the player shows its fallback.
 
 When an episode's audio is not on a show.fm media host (`m.cdn.media` or `media.podcasterplus.com`), it still plays, but there is no Download button and no transcript is offered. No other environment's host is built in: for staging or testing, a page can add hosts with `window.showfmMediaHosts = ['media.example.test']`, set before the elements load.
 
+Audio download links carry `rel="nofollow ugc noopener noreferrer"`. Canonical listen links and the show.fm credit keep their existing rel values.
+
 The player's colours, font and corners follow the [styling hooks](#styling-hooks). Its parts can also be styled with `::part()`: `container`, `artwork`, `title`, `subtitle`, `controls`, `play`, `seek`, `rate`, `mute`, `share`, `download`, `transcript`, `footer` and `error`.
 
 ### The transcript option
