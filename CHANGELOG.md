@@ -1,5 +1,11 @@
 # @showfm/embed
 
+## 1.7.1
+
+### Patch Changes
+
+- Mark user audio download links with `nofollow ugc noopener noreferrer`, preserving download behaviour and canonical show.fm links.
+
 ## 1.7.0
 
 ### Minor Changes

@@ -793,6 +793,7 @@
 						<a
 							class="icon-btn action-btn"
 							href={downloadUrl}
+							rel="nofollow ugc noopener noreferrer"
 							download={downloadName}
 							aria-label={s.download}
 							part="download"
